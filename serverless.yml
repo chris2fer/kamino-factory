@@ -1,0 +1,82 @@
+
+service: aws-factory
+
+frameworkVersion: '2'
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  FACTORY_BUS: ${file(./config.${opt:stage, self:provider.stage, 'dev'}.json):FACTORY_BUS}
+
+provider:
+  name: aws
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+
+  stage: dev
+  region: us-east-1
+
+#  iamRoleStatements:
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:ListBucket"
+#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+
+  environment:
+    FACTORY_BUS: ${self:custom.FACTORY_BUS}
+    FACTORY_EVENT_SOURCE: ${file(./config.${opt:stage, self:provider.stage, 'dev'}.json):FACTORY_EVENT_SOURCE}
+
+package:
+  exclude:
+    - venv/**
+
+functions:
+  receiver:
+    handler: workers/receiver/handler.receiver
+    events:
+     - httpApi:
+         path: /factory/aws/accounts
+         method: post
+
+#      - sns: greeter-topic
+#      - cloudwatchEvent:
+#          event:
+#            source:
+#              - "aws.ec2"
+#            detail-type:
+#              - "EC2 Instance State-change Notification"
+#            detail:
+#              state:
+#                - pending
+#    environment:
+#      variable2: value2
+  accountCreate:
+    handler: workers/account_request/handler.event_handler
+    events:
+      - eventBridge:
+          eventBus: ${self:custom.FACTORY_BUS}
+          pattern:
+            source:
+              - factory.requests.newAccountRequest
+#    environment:
+#      variable2: value2
+  guidify:
+    handler: workers/guidify/handler.handle_event
+    events:
+      - eventBridge:
+          eventBus: ${self:custom.FACTORY_BUS}
+          pattern:
+            source:
+              - factory.requests.received
+#resources:
+#  Resources:
+#    NewResource:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: my-new-bucket
+#  Outputs:
+#     NewOutput:
+#       Description: "Description for the output"
+#       Value: "Some output value"
+
