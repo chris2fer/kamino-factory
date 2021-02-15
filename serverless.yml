@@ -6,7 +6,6 @@ frameworkVersion: '2'
 plugins:
   - serverless-python-requirements
   - serverless-iam-roles-per-function
-  
 custom:
   FACTORY_BUS: ${file(./config.${opt:stage, self:provider.stage, 'dev'}.json):FACTORY_BUS}
 
@@ -37,6 +36,19 @@ functions:
 
   accountCreate:
     handler: workers/account_request/handler.event_handler
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+          - "organizations:TagResource"
+          - "organizations:ListAccounts"
+          - "organizations:DescribeAccount"
+          - "ec2:DescribeAccountAttributes"
+          - "organizations:CreateAccount"
+          - "events:*"
+        Resource: "*"
+    environment:
+      ALLOW_BILLING_ACCESS: ${file(./config.${opt:stage, self:provider.stage, 'false'}.json):ALLOW_BILLING_ACCESS}
     events:
       - eventBridge:
           eventBus: ${self:custom.FACTORY_BUS}
@@ -46,12 +58,11 @@ functions:
 
   deleteVpc:
     handler: workers/delete_vpc/handler.lambda_handler
-    # iamRoleStatementsName: my-custom-role-name #optional custom role name setting instead of the default generated one
     iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: "Allow"        
         Action:
-          - ec2:*        
+          - "ec2:*"
         Resource: "*"
     events:
       - eventBridge:

@@ -12,6 +12,39 @@ REQUIRED_EMAIL_SUFFIX = 'hotmail.com' # Account email addresses must end with th
 MAX_ACCOUNT_NAME_LENGTH = 50            # 50 is AWS max length
 FACTORY_EVENT_BUS = os.getenv('FACTORY_BUS')
 FACTORY_EVENT_SOURCE = f"{os.getenv('FACTORY_EVENT_SOURCE', 'factory')}.accounts"
+ALLOW_BILLING_ACCESS = os.getenv('ALLOW_BILLING_ACCESS', 'false').lower() == 'true'
+
+def create_account(email: str, name: str, tags: list=[]) -> str:
+    
+    organizations = boto3.Session().client('organizations')
+    
+    return '123412341234' #TODO: Remove for production
+    
+    resp = organizations.create_account(
+        Email=email,
+        AccountName=name,
+    )
+
+    status_id = resp['CreateAccountStatus']['Id']
+    sleep(3)
+
+    while True:
+        resp = organizations.describe_create_account_status(CreateAccountRequestId=status_id)
+        status = resp.get('CreateAccountStatus')
+        state = status['State']
+
+        if state == 'IN_PROGRESS':
+            print('{"status": "Waiting"}')
+            sleep(15)
+        elif state == 'SUCCEEDED':
+            print('Complete. Account Created')
+            return resp['CreateAccountStatus']['AccountId']
+        elif state == 'FAILED':
+            print(f'{{"status": "FAILED", "reason": "{status["FailureReason"]}"}}')
+            return resp['CreateAccountStatus']
+        else:
+            print('{"status": "FAILED", "reason": "unknown status"}')
+
 
 def validate_email(email: str, force=False) -> bool:
     if '@' in email:
@@ -72,12 +105,16 @@ def send_event(event):
         print(e)
 
 def event_handler(event, context):
-
+    tags = [
+        {"Key": "CreatedBy", "Value": "Factory v1.0"},
+        {"Key": "RequestedBy", "Value": "cdearie"}
+    ]
     if not validate_request(event=event):
         print("Request failed validation")
         return event
     
-    print("  WOULD RUN BOTO CLIENT TO CREATE ACCOUNT")
+    account_id = create_account(email='', name='', tags=tags)
+    event['accountId'] = account_id
     send_event(event)
     return event
 
