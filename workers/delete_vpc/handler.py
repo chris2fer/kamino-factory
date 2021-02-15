@@ -153,33 +153,3 @@ def lambda_handler(event, context):
     delete_worker.handle_message(delete_event)
 
     return delete_event
-
-
-if __name__ == '__main__':
-    event = {
-        'Attributes': {
-            'EventName': 'NewTeam',
-            'EventVersion': 1,
-            'GUID': 'welcometothejungle',
-            'StateMachine': {
-                'Valid': True,
-                "Error": {
-                    "Raised": False,
-                    "ErrorMessage": ""
-                }
-            }
-        },
-        'Body': {
-            'totes': 'brah',
-            'team_account_number': '244211622104',
-            'regions': []
-        }
-    }
-
-    delete_event = copy.deepcopy(event)
-
-    # Pull billing role arn from Env Vars
-    try:
-        billing_role_arn = os.environ['billing_role_arn']
-    except:
-       raise Exception("Billing Role Env Var not found")

@@ -5,7 +5,7 @@ frameworkVersion: '2'
 
 plugins:
   - serverless-python-requirements
-
+  
 custom:
   FACTORY_BUS: ${file(./config.${opt:stage, self:provider.stage, 'dev'}.json):FACTORY_BUS}
 
