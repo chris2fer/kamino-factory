@@ -16,6 +16,10 @@ var/
 .installed.cfg
 *.egg
 
+# configs
+config.*.json
+
+
 # Serverless directories
 .serverless
 
@@ -23,3 +27,5 @@ var/
 
 node_modules/
 venv/
+
+scratch.py

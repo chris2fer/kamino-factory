@@ -28,31 +28,34 @@ def send_event(event):
         print(f"Sending event as source: {items[0]['Source']}")
         client.put_events(Entries=items)
     except ClientError as e:
+        print("Couldn't send event")
         print(e)
 
-def process_event(event):
+def process_event(event: str) -> dict:
     data = json.loads(event)
     
     if 'GUID' not in data.keys():
         data['GUID'] = str(uuid.uuid4())
 
     send_event(data)
+    return data
 
 
 def receiver(event, context):
     
     factory_event = b64decode(event['body']).decode('utf-8')
-    process_event(factory_event)
+    res = process_event(factory_event)
+
+    print(res)
 
     body = {
-        "message": "Go Serverless v1.0! Your function executed successfully!",
-        "input": event
+        "message": "Your factory request has been received successfully!",
+        "GUID": res['GUID']
     }
+    print(body)
     response = {
         "statusCode": 200,
-        "body": json.dumps(factory_event)
+        "body": json.dumps(body)
     }
 
     return response
-
-print(FACTORY_EVENT_SOURCE)

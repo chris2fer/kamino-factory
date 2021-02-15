@@ -5,6 +5,7 @@ frameworkVersion: '2'
 
 plugins:
   - serverless-python-requirements
+  - serverless-iam-roles-per-function
   
 custom:
   FACTORY_BUS: ${file(./config.${opt:stage, self:provider.stage, 'dev'}.json):FACTORY_BUS}
@@ -17,15 +18,10 @@ provider:
   stage: dev
   region: us-east-1
 
-#  iamRoleStatements:
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:ListBucket"
-#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
-
   environment:
     FACTORY_BUS: ${self:custom.FACTORY_BUS}
     FACTORY_EVENT_SOURCE: ${file(./config.${opt:stage, self:provider.stage, 'dev'}.json):FACTORY_EVENT_SOURCE}
+#  iamRoleStatements:
 
 package:
   exclude:
@@ -39,18 +35,6 @@ functions:
          path: /factory/aws/accounts
          method: post
 
-#      - sns: greeter-topic
-#      - cloudwatchEvent:
-#          event:
-#            source:
-#              - "aws.ec2"
-#            detail-type:
-#              - "EC2 Instance State-change Notification"
-#            detail:
-#              state:
-#                - pending
-#    environment:
-#      variable2: value2
   accountCreate:
     handler: workers/account_request/handler.event_handler
     events:
@@ -59,22 +43,30 @@ functions:
           pattern:
             source:
               - factory.requests.newAccountRequest
-#    environment:
-#      variable2: value2
-  guidify:
-    handler: workers/guidify/handler.handle_event
+
+  deleteVpc:
+    handler: workers/delete_vpc/handler.lambda_handler
+    # iamRoleStatementsName: my-custom-role-name #optional custom role name setting instead of the default generated one
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+          - ec2:*        
+        Resource: "*"
     events:
       - eventBridge:
           eventBus: ${self:custom.FACTORY_BUS}
           pattern:
             source:
-              - factory.requests.received
+              - factory.accounts.accountCreated
+              
 #resources:
 #  Resources:
 #    NewResource:
 #      Type: AWS::S3::Bucket
 #      Properties:
 #        BucketName: my-new-bucket
+
 #  Outputs:
 #     NewOutput:
 #       Description: "Description for the output"
